@@ -4,13 +4,15 @@ import Spinner from '../spinner/Spinner';
 import ErrorMessage from '../error/Error';
 
 import './charList.scss';
-import abyss from '../../resources/img/abyss.jpg';
 
 class CharList extends Component {
 	state = {
 		chars: [],
 		loading: true,
-		error: false
+		error: false,
+		newItemLoading: false,
+		offset: 210,
+		charEnded: false
 	}
 	marvelService = new MarvelService();
 	componentDidMount () {
@@ -21,12 +23,30 @@ class CharList extends Component {
 			loading: true
 		})
 	}
-	onCharsLoaded = (chars) => {
+	onRequest = (offset) => {
+		this.onNewCharsLoading();
+		this.marvelService.getAllCharacters(offset)
+				.then(this.onCharsLoaded)
+				.catch(this.onError)
+	}
+	onNewCharsLoading = () => {
 		this.setState({
-			chars,
-			loading: false,
-			error: false
+			newItemLoading: true
 		})
+	}
+	onCharsLoaded = (newChars) => {
+		let ended = false;
+		if (newChars.length < 9) {
+			ended = true;
+		}
+		this.setState(({chars, offset}) => ({
+			chars: [...chars, ...newChars],
+			loading: false,
+			error: false,
+			newItemLoading: false,
+			offset: offset + 9,
+			charEnded: ended
+		}))
 	}
 	onError = () => {
 		this.setState({
@@ -36,13 +56,10 @@ class CharList extends Component {
 	}
 	updateList = () => {
 		this.onLoading();
-		this.marvelService
-				.getAllCharacters()
-				.then(this.onCharsLoaded)
-				.catch(this.onError);
+		this.onRequest();
 	}
 	render () {
-		const {chars, loading, error} = this.state;
+		const {chars, loading, error, offset, newItemLoading, charEnded} = this.state;
 		const items = chars.map(char => {
 			const {id, name, thumbnail} = char;
 			let imgStyle = {'objectFit' : 'cover'};
@@ -66,7 +83,10 @@ class CharList extends Component {
 						{spinner}
 						{content}
 					</ul>
-					<button className="button button__main button__long">
+					<button className="button button__main button__long"
+									disabled={newItemLoading}
+									style={{'display' : charEnded ? 'none' : 'block'}}
+									onClick={() => this.onRequest(offset)}>
 							<div className="inner">load more</div>
 					</button>
 			</div>
