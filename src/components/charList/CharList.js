@@ -1,4 +1,5 @@
-import { Component } from 'react/cjs/react.development';
+import React, { Component } from 'react/cjs/react.development';
+import PropTypes from 'prop-types';
 import MarvelService from '../../services/MarvelService';
 import Spinner from '../spinner/Spinner';
 import ErrorMessage from '../error/Error';
@@ -14,26 +15,46 @@ class CharList extends Component {
 		offset: 210,
 		charEnded: false
 	}
+
+	listItemRefs = []
+
+	setRefs = (el) => {
+		this.listItemRefs.push(el);
+	}
+
+	focusOnRef = (id) => {
+		this.listItemRefs.forEach(item => {
+			item.classList.remove('char__item_selected');
+		});
+		this.listItemRefs[id].classList.add('char__item_selected');
+		this.listItemRefs[id].focus();
+	}
+
 	marvelService = new MarvelService();
 	componentDidMount () {
 		this.updateList();
+		// this.listItemRef.current.setAttribute('tabindex', 0);
 	}
+
 	onLoading = () => {
 		this.setState({
 			loading: true
 		})
 	}
+
 	onRequest = (offset) => {
 		this.onNewCharsLoading();
 		this.marvelService.getAllCharacters(offset)
 				.then(this.onCharsLoaded)
 				.catch(this.onError)
 	}
+
 	onNewCharsLoading = () => {
 		this.setState({
 			newItemLoading: true
 		})
 	}
+
 	onCharsLoaded = (newChars) => {
 		let ended = false;
 		if (newChars.length < 9) {
@@ -48,26 +69,43 @@ class CharList extends Component {
 			charEnded: ended
 		}))
 	}
+
 	onError = () => {
 		this.setState({
 			loading: false,
 			error: true
 		})
 	}
+
 	updateList = () => {
 		this.onLoading();
 		this.onRequest();
 	}
+
 	render () {
 		const {chars, loading, error, offset, newItemLoading, charEnded} = this.state;
-		const items = chars.map(char => {
+		const items = chars.map((char, i) => {
 			const {id, name, thumbnail} = char;
 			let imgStyle = {'objectFit' : 'cover'};
     		if (thumbnail === 'http://i.annihil.us/u/prod/marvel/i/mg/b/40/image_not_available.jpg') {
         	imgStyle = {'objectFit' : 'unset'};
     		}
 			return (
-				<li className="char__item" key={id} onClick={() => this.props.onCharSelected(id)}>
+				<li className="char__item" 
+						tabIndex={0}
+						key={id}
+						ref={this.setRefs}
+						onClick={() => {
+							this.props.onCharSelected(id);
+							this.focusOnRef(i);
+						}}
+						onKeyPress={(e) => {
+							if (e.key === ' ' || e.key === "Enter") {
+									this.props.onCharSelected(char.id);
+									this.focusOnRef(i);
+							}
+						}}
+						>
 						<img src={thumbnail} alt={name} style={imgStyle}/>
 						<div className="char__name">{name}</div>
 				</li>
@@ -94,5 +132,7 @@ class CharList extends Component {
 	}
     
 }
-
+CharList.propTypes = {
+	onCharSelected: PropTypes.func
+}
 export default CharList;
